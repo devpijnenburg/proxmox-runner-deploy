@@ -15,7 +15,7 @@ on:
 jobs:
   deploy:
     name: Deploy runner "${{ inputs.runner_name || '(auto-named)' }}"
-    # Runs on your existing self-hosted Proxmox runner.
+    # Runs on the bootstrap runner installed directly on the Proxmox host.
     # Change the label below if your runner uses a different label.
     runs-on: [self-hosted, proxmox]
 
@@ -33,6 +33,10 @@ jobs:
           fi
           echo "name=${NAME}" >> "$GITHUB_OUTPUT"
 
+      - name: Reserve next LXC container ID
+        id: reserve-ctid
+        run: echo "ctid=$(pvesh get /cluster/nextid)" >> "$GITHUB_OUTPUT"
+
       # Requires a secret named GH_PAT with one of:
       #   - Fine-grained PAT: "Administration: Read & write" on the target repo
       #     (or "Self-hosted runners: Read & write" for org-level runners)
@@ -42,7 +46,6 @@ jobs:
         env:
           GH_PAT: ${{ secrets.GH_PAT }}
         run: |
-          # Strip protocol + host to get the path, e.g. "org/repo" or "org"
           PATH_PART="${{ inputs.runner_repo }}"
           PATH_PART="${PATH_PART#https://github.com/}"
           PATH_PART="${PATH_PART%/}"
@@ -69,18 +72,18 @@ jobs:
             exit 1
           fi
 
-          # Mask before writing to output so it never appears in plain text in logs
           echo "::add-mask::${TOKEN}"
           echo "runner_token=${TOKEN}" >> "$GITHUB_OUTPUT"
 
       - name: Make deploy script executable
         run: chmod +x scripts/deploy-runner.sh
 
-      - name: Deploy runner on Proxmox
+      - name: Deploy runner in new LXC container
         env:
           RUNNER_REPO: ${{ inputs.runner_repo }}
           RUNNER_TOKEN: ${{ steps.get-token.outputs.runner_token }}
-        run: sudo --preserve-env=RUNNER_REPO,RUNNER_TOKEN bash scripts/deploy-runner.sh "${{ steps.resolve-name.outputs.name }}"
+          CTID: ${{ steps.reserve-ctid.outputs.ctid }}
+        run: sudo --preserve-env=RUNNER_REPO,RUNNER_TOKEN,CTID bash scripts/deploy-runner.sh "${{ steps.resolve-name.outputs.name }}"
 
       - name: Verify runner service is active
-        run: systemctl is-active "actions-runner-${{ steps.resolve-name.outputs.name }}"
+        run: pct exec "${{ steps.reserve-ctid.outputs.ctid }}" -- systemctl is-active actions-runner
