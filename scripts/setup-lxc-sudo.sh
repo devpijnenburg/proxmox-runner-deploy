@@ -49,16 +49,19 @@ echo "==> Container  : ${CTID}"
 echo "==> Runner user: ${RUNNER_USER}"
 echo "==> Sudoers    : ${SUDOERS_FILE}"
 
-# Check if rule already exists
+# Check if rule already exists and is up to date
 EXISTING=$(pct exec "$CTID" -- bash -c "cat ${SUDOERS_FILE} 2>/dev/null || true")
-if [[ -n "$EXISTING" ]]; then
-  echo "Sudoers rule already exists inside container ${CTID}:"
-  echo "  ${EXISTING}"
-  echo "Nothing to do."
+CORRECT_RULE="${RUNNER_USER} ALL=(ALL) NOPASSWD: SETENV: /usr/bin/bash"
+if [[ "$EXISTING" == "$CORRECT_RULE" ]]; then
+  echo "Sudoers rule is already correct — nothing to do."
   exit 0
+elif [[ -n "$EXISTING" ]]; then
+  echo "Updating outdated sudoers rule:"
+  echo "  was : ${EXISTING}"
+  echo "  now : ${CORRECT_RULE}"
 fi
 
-pct exec "$CTID" -- bash -c "echo '${RUNNER_USER} ALL=(ALL) NOPASSWD: /usr/bin/bash' > ${SUDOERS_FILE} && chmod 440 ${SUDOERS_FILE}"
+pct exec "$CTID" -- bash -c "echo '${RUNNER_USER} ALL=(ALL) NOPASSWD: SETENV: /usr/bin/bash' > ${SUDOERS_FILE} && chmod 440 ${SUDOERS_FILE}"
 
 echo "==> Verifying..."
 pct exec "$CTID" -- bash -c "cat ${SUDOERS_FILE}"
