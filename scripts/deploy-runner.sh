@@ -20,14 +20,18 @@ CTID="${CTID:?CTID env var is required}"
 
 SERVICE_NAME="actions-runner"
 SUDOERS_FILE="/etc/sudoers.d/runner-deploy"
+CORRECT_RULE="runner ALL=(ALL) NOPASSWD: SETENV: /usr/bin/bash"
 
 if [[ $EUID -ne 0 ]]; then
   echo "ERROR: this script must be run as root." >&2
   exit 1
 fi
 
+[[ "$CTID" =~ ^[0-9]+$ ]] || { echo "ERROR: CTID '${CTID}' is not a valid integer." >&2; exit 1; }
+
 if pct status "$CTID" &>/dev/null; then
   echo "ERROR: container ${CTID} already exists." >&2
+  echo "  To remove: pct destroy ${CTID}" >&2
   exit 1
 fi
 
@@ -51,6 +55,10 @@ for i in $(seq 1 30); do
   if pct exec "$CTID" -- true 2>/dev/null; then
     break
   fi
+  if [[ $i -eq 30 ]]; then
+    echo "ERROR: container ${CTID} did not become ready in time." >&2
+    exit 1
+  fi
   sleep 2
 done
 
@@ -61,16 +69,27 @@ pct exec "$CTID" -- sudo -u runner /opt/actions-runner/config.sh \
   --token "${RUNNER_TOKEN}" \
   --name "${RUNNER_NAME}" \
   --labels proxmox \
-  --unattended
+  --unattended \
+  || { echo "ERROR: runner configuration failed." >&2; exit 1; }
 
 # ── Set up sudoers ─────────────────────────────────────────────────────────────
-pct exec "$CTID" -- bash -c \
-  "echo 'runner ALL=(ALL) NOPASSWD: SETENV: /usr/bin/bash' > ${SUDOERS_FILE} && chmod 440 ${SUDOERS_FILE}"
+EXISTING=$(pct exec "$CTID" -- bash -c "cat ${SUDOERS_FILE} 2>/dev/null || true")
+if [[ "$EXISTING" != "$CORRECT_RULE" ]]; then
+  pct exec "$CTID" -- bash -c \
+    "echo '${CORRECT_RULE}' > ${SUDOERS_FILE} && chmod 440 ${SUDOERS_FILE}"
+fi
 
 # ── Start the runner service ───────────────────────────────────────────────────
 echo "==> Starting ${SERVICE_NAME} in container ${CTID}..."
 pct exec "$CTID" -- systemctl start "${SERVICE_NAME}"
 
+STATUS=$(pct exec "$CTID" -- systemctl is-active "${SERVICE_NAME}" 2>/dev/null || echo "failed")
+if [[ "$STATUS" != "active" ]]; then
+  echo "ERROR: service not active (status: ${STATUS}). Recent logs:" >&2
+  pct exec "$CTID" -- journalctl -u "${SERVICE_NAME}" -n 20 --no-pager >&2
+  exit 1
+fi
+
 echo ""
 echo "Runner '${RUNNER_NAME}' deployed in container ${CTID}."
-echo "  Status: $(pct exec "$CTID" -- systemctl is-active ${SERVICE_NAME})"
+echo "  Status: ${STATUS}"

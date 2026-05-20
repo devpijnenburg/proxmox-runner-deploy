@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
     inputs:
       runner_name:
-        description: "Runner name (optional — a UUID is generated when left blank)"
+        description: "Runner name (optional — generates a UUID when left blank)"
         required: false
         type: string
       runner_repo:
@@ -50,6 +50,11 @@ jobs:
           PATH_PART="${PATH_PART#https://github.com/}"
           PATH_PART="${PATH_PART%/}"
 
+          if [[ -z "$PATH_PART" ]]; then
+            echo "ERROR: runner_repo input is invalid or empty." >&2
+            exit 1
+          fi
+
           SEGMENT_COUNT=$(awk -F'/' '{print NF}' <<< "$PATH_PART")
 
           if [[ "$SEGMENT_COUNT" -ge 2 ]]; then
@@ -64,7 +69,7 @@ jobs:
             -H "X-GitHub-Api-Version: 2022-11-28" \
             "${API_URL}")
 
-          TOKEN=$(echo "$RESPONSE" | grep '"token"' | head -1 | cut -d'"' -f4)
+          TOKEN=$(echo "$RESPONSE" | jq -r '.token // empty')
 
           if [[ -z "$TOKEN" ]]; then
             echo "ERROR: failed to obtain registration token." >&2
@@ -75,9 +80,6 @@ jobs:
           echo "::add-mask::${TOKEN}"
           echo "runner_token=${TOKEN}" >> "$GITHUB_OUTPUT"
 
-      - name: Make deploy script executable
-        run: chmod +x scripts/deploy-runner.sh
-
       - name: Deploy runner in new LXC container
         env:
           RUNNER_REPO: ${{ inputs.runner_repo }}
@@ -87,3 +89,15 @@ jobs:
 
       - name: Verify runner service is active
         run: pct exec "${{ steps.reserve-ctid.outputs.ctid }}" -- systemctl is-active actions-runner
+
+      - name: Deployment summary
+        run: |
+          echo "Runner   : ${{ steps.resolve-name.outputs.name }}"
+          echo "Container: ${{ steps.reserve-ctid.outputs.ctid }}"
+          echo "Verify   : Settings → Actions → Runners"
+
+      - name: Show container logs on failure
+        if: failure()
+        run: |
+          pct exec "${{ steps.reserve-ctid.outputs.ctid }}" -- \
+            journalctl -u actions-runner -n 50 --no-pager 2>/dev/null || true
