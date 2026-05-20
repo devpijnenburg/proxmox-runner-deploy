@@ -32,7 +32,7 @@ Elke runner krijgt een eigen map en service op de host, zodat je meerdere runner
 Voer dit eenmalig uit op de Proxmox host. Het script maakt de juiste sudoers-regel aan en valideert deze automatisch.
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/devpijnenburg/auto-github-runner/main/scripts/setup-sudo.sh | sudo bash
+bash -c "$(curl -fsSL https://raw.githubusercontent.com/devpijnenburg/auto-github-runner/main/scripts/setup-sudo.sh)"
 ```
 
 Of als je de repo al gecloned hebt op de host:
