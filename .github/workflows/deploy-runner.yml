@@ -1,0 +1,40 @@
+name: Deploy GitHub Actions Runner on Proxmox
+
+on:
+  workflow_dispatch:
+    inputs:
+      runner_name:
+        description: "Runner name (unique, used as service/directory suffix)"
+        required: true
+        type: string
+      runner_repo:
+        description: "Repository or org URL (e.g. https://github.com/org/repo)"
+        required: true
+        type: string
+      runner_token:
+        description: "Runner registration token (generate via Settings → Actions → Runners → New)"
+        required: true
+        type: string
+
+jobs:
+  deploy:
+    name: Deploy runner "${{ inputs.runner_name }}"
+    # Runs on your existing self-hosted Proxmox runner.
+    # Change the label below if your runner uses a different label.
+    runs-on: [self-hosted, proxmox]
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Make deploy script executable
+        run: chmod +x scripts/deploy-runner.sh
+
+      - name: Deploy runner on Proxmox
+        env:
+          RUNNER_REPO: ${{ inputs.runner_repo }}
+          RUNNER_TOKEN: ${{ inputs.runner_token }}
+        run: sudo --preserve-env=RUNNER_REPO,RUNNER_TOKEN bash scripts/deploy-runner.sh "${{ inputs.runner_name }}"
+
+      - name: Verify runner service is active
+        run: systemctl is-active "actions-runner-${{ inputs.runner_name }}"
