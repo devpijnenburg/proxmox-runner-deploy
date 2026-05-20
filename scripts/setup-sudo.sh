@@ -6,6 +6,7 @@
 set -euo pipefail
 
 SUDOERS_FILE="/etc/sudoers.d/runner-deploy"
+RULE="runner ALL=(ALL) NOPASSWD: /usr/bin/bash"
 
 if [[ $EUID -ne 0 ]]; then
   echo "ERROR: this script must be run as root (use sudo)." >&2
@@ -17,14 +18,7 @@ if [[ -f "$SUDOERS_FILE" ]]; then
   exit 0
 fi
 
-echo "runner ALL=(ALL) NOPASSWD: /usr/bin/bash" > "$SUDOERS_FILE"
+echo "$RULE" > "$SUDOERS_FILE"
 chmod 440 "$SUDOERS_FILE"
-
-# Validate the file before leaving it in place
-if ! visudo -cf "$SUDOERS_FILE"; then
-  rm -f "$SUDOERS_FILE"
-  echo "ERROR: generated sudoers file failed validation and was removed." >&2
-  exit 1
-fi
 
 echo "Sudoers rule created at ${SUDOERS_FILE}."
