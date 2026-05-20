@@ -28,20 +28,23 @@ Elke runner krijgt een eigen map en service op de host, zodat je meerdere runner
 
 ### 1. Bootstrap runner aanmaken
 
-De workflow heeft een bestaande runner nodig om op te draaien. Maak eenmalig een runner aan in een LXC container op je Proxmox host:
+De workflow heeft een bestaande runner nodig om op te draaien. Maak eenmalig een runner aan in een LXC container via het community-script:
 
-1. Maak een LXC container aan (Debian of Ubuntu) en zorg dat die toegang heeft tot internet
-2. Installeer de GitHub Actions runner binary in de container:
-   - Ga naar de repo → **Settings → Actions → Runners → New self-hosted runner**
-   - Kies **Linux / X64** en volg de installatie-instructies in de container
-3. Voeg het label `proxmox` toe tijdens de configuratiestap:
+1. Voer het installatiescript uit op de Proxmox host:
    ```bash
-   # Voeg --labels proxmox toe aan het config.sh commando
-   ./config.sh --url https://github.com/<org>/<repo> --token <TOKEN> --labels proxmox --unattended
+   bash -c "$(curl -fsSL https://community-scripts.org/scripts/github-runner)"
    ```
-4. Start de runner als service zodat hij na een herstart actief blijft:
+2. Haal een registratietoken op: ga naar de repo → **Settings → Actions → Runners → New self-hosted runner** en kopieer het token.
+3. Configureer de runner in de container — voeg `--labels proxmox` toe zodat de workflow hem kan vinden:
    ```bash
-   sudo ./svc.sh install && sudo ./svc.sh start
+   cd /opt/actions-runner && sudo -u runner ./config.sh \
+     --url https://github.com/<org>/<repo> \
+     --token <TOKEN> \
+     --labels proxmox
+   ```
+4. Start de runner service:
+   ```bash
+   systemctl start actions-runner
    ```
 
 Controleer daarna via **Settings → Actions → Runners** of de runner online staat met het label `proxmox`.
