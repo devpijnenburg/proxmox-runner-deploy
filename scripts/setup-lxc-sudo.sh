@@ -2,18 +2,25 @@
 # Sets up the passwordless sudo rule for the GitHub Actions runner inside an LXC container.
 # Run this on the Proxmox host as root.
 #
-# Usage: setup-lxc-sudo.sh <ctid> [runner-user]
-#   ctid         - LXC container ID (e.g. 100)
-#   runner-user  - User running the runner inside the container (default: auto-detect)
+# Usage (script):    sudo bash setup-lxc-sudo.sh <ctid> [runner-user]
+# Usage (one-liner): sudo CTID=100 bash -c "$(curl -fsSL https://raw.githubusercontent.com/devpijnenburg/proxmox-runner-deploy/main/scripts/setup-lxc-sudo.sh)"
+#
+#   CTID / $1        - LXC container ID (e.g. 100)
+#   RUNNER_USER / $2 - User running the runner inside the container (default: auto-detect)
 
 set -euo pipefail
 
-CTID="${1:?Usage: $0 <ctid> [runner-user]}"
+# Accept both env vars (one-liner) and positional args (direct invocation)
+CTID="${CTID:-${1:-}}"
 SUDOERS_FILE="/etc/sudoers.d/runner-deploy"
 
 if [[ $EUID -ne 0 ]]; then
   echo "ERROR: this script must be run as root on the Proxmox host." >&2
   exit 1
+fi
+
+if [[ -z "$CTID" ]]; then
+  read -rp "LXC container ID: " CTID
 fi
 
 if ! pct status "$CTID" &>/dev/null; then
@@ -26,9 +33,9 @@ if [[ "$(pct status "$CTID")" != *"running"* ]]; then
   exit 1
 fi
 
-# Auto-detect the runner user if not provided
-if [[ -n "${2:-}" ]]; then
-  RUNNER_USER="$2"
+# Accept runner user from env var, positional arg, or auto-detect
+if [[ -n "${RUNNER_USER:-${2:-}}" ]]; then
+  RUNNER_USER="${RUNNER_USER:-$2}"
 else
   echo "==> Auto-detecting runner user inside container ${CTID}..."
   RUNNER_USER=$(pct exec "$CTID" -- bash -c "ps aux | grep 'run\.sh' | grep -v grep | awk '{print \$1}' | head -1")
