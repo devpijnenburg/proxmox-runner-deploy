@@ -28,38 +28,23 @@ Elke runner krijgt een eigen map en service op de host, zodat je meerdere runner
 
 ### 1. Bootstrap runner aanmaken
 
-De workflow heeft een bestaande runner nodig om op te draaien. Maak eenmalig een runner aan in een LXC container via het community-script:
+De workflow heeft een bestaande runner nodig om op te draaien. Voer dit script uit op de Proxmox host — het maakt een LXC container aan, installeert de runner erin en configureert alles automatisch.
 
-1. Voer het installatiescript uit op de Proxmox host:
-   ```bash
-   bash -c "$(curl -fsSL https://community-scripts.org/scripts/github-runner)"
-   ```
-2. Haal een registratietoken op: ga naar de repo → **Settings → Actions → Runners → New self-hosted runner** en kopieer het token.
-3. Configureer de runner in de container — voeg `--labels proxmox` toe zodat de workflow hem kan vinden:
-   ```bash
-   cd /opt/actions-runner && sudo -u runner ./config.sh \
-     --url https://github.com/<org>/<repo> \
-     --token <TOKEN> \
-     --labels proxmox
-   ```
-4. Start de runner service:
-   ```bash
-   systemctl start actions-runner
-   ```
-
-Controleer daarna via **Settings → Actions → Runners** of de runner online staat met het label `proxmox`.
-
-### 2. Sudo-rechten instellen in de LXC container
-
-De workflow draait `sudo bash` om het deploy script met root-rechten uit te voeren. Voer dit eenmalig uit **op de Proxmox host** (niet in de container):
-
+**Unattended:**
 ```bash
-sudo CTID=<container-id> bash -c "$(curl -fsSL https://raw.githubusercontent.com/devpijnenburg/proxmox-runner-deploy/main/scripts/setup-lxc-sudo.sh)"
+REPO_URL=https://github.com/<org>/<repo> TOKEN=<token> sudo bash create-bootstrap-runner.sh
 ```
 
-Vervang `<container-id>` door het ID van de LXC container (bijv. `100`). Het script detecteert automatisch de runner-user en schrijft de sudoers-regel in de container.
+**Interactief (het script vraagt om de ontbrekende waarden):**
+```bash
+sudo bash -c "$(curl -fsSL https://raw.githubusercontent.com/devpijnenburg/proxmox-runner-deploy/main/scripts/create-bootstrap-runner.sh)"
+```
 
-### 3. GitHub Personal Access Token (PAT) aanmaken
+Haal het registratietoken op via: repo → **Settings → Actions → Runners → New self-hosted runner**.
+
+De runner krijgt automatisch het label `proxmox` en de juiste sudoers-regel. Controleer daarna via **Settings → Actions → Runners** of hij online staat.
+
+### 2. GitHub Personal Access Token (PAT) aanmaken
 
 De workflow heeft een PAT nodig om automatisch een runner registratietoken op te halen via de GitHub API. Maak een **fine-grained PAT** aan:
 
@@ -77,14 +62,14 @@ De workflow heeft een PAT nodig om automatisch een runner registratietoken op te
 
 > **Opmerking:** voor organisaties moet de org-eigenaar fine-grained PATs toestaan via **Org Settings → Personal access tokens → Allow fine-grained personal access tokens**.
 
-### 4. PAT opslaan als secret
+### 3. PAT opslaan als secret
 
 1. Ga naar deze repo → **Settings → Secrets and variables → Actions**
 2. Klik **New repository secret**
 3. Naam: `GH_PAT`
 4. Waarde: het zojuist aangemaakte token
 
-### 5. Runner label aanpassen (indien nodig)
+### 4. Runner label aanpassen (indien nodig)
 
 De workflow verwacht dat de bestaande Proxmox runner het label `proxmox` heeft. Controleer dit via **Settings → Actions → Runners** in jouw repo of organisatie. Pas het label aan in de workflow als het anders is:
 
@@ -125,9 +110,10 @@ De systemd service start automatisch na een herstart van de host en herstart de 
 .
 ├── .github/
 │   └── workflows/
-│       └── deploy-runner.yml      # GitHub Actions workflow (handmatig te triggeren)
+│       └── deploy-runner.yml          # GitHub Actions workflow (handmatig te triggeren)
 └── scripts/
-    ├── setup-lxc-sudo.sh          # Eenmalige setup: sudoers-regel aanmaken in de LXC container (draai op de Proxmox host)
-    ├── setup-sudo.sh              # Alternatief: sudoers-regel aanmaken op de host zelf (zonder LXC)
-    └── deploy-runner.sh           # Deployment script dat op de Proxmox host draait
+    ├── create-bootstrap-runner.sh     # Eenmalige setup: maakt LXC aan met runner erin (draai op de Proxmox host)
+    ├── setup-lxc-sudo.sh              # Alternatief: sudoers instellen in een bestaande LXC
+    ├── setup-sudo.sh                  # Alternatief: sudoers instellen op de host zelf (zonder LXC)
+    └── deploy-runner.sh               # Deployment script dat via de workflow op de host draait
 ```
