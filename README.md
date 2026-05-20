@@ -29,15 +29,14 @@ Elke runner draait in zijn eigen LXC container. De bootstrap runner draait direc
 
 De bootstrap runner draait **direct op de Proxmox host** (niet in een LXC), zodat hij nieuwe LXC containers kan aanmaken voor elke gedeployde runner.
 
-**Unattended:**
-```bash
-sudo REPO_URL=https://github.com/<org>/<repo> TOKEN=<token> bash -c \
-  "$(curl -fsSL https://raw.githubusercontent.com/devpijnenburg/proxmox-runner-deploy/main/scripts/create-bootstrap-runner.sh)"
-```
-
 **Interactief:**
 ```bash
-sudo bash -c "$(curl -fsSL https://raw.githubusercontent.com/devpijnenburg/proxmox-runner-deploy/main/scripts/create-bootstrap-runner.sh)"
+bash -c "$(curl -fsSL https://raw.githubusercontent.com/devpijnenburg/proxmox-runner-deploy/main/scripts/create-bootstrap-runner.sh)"
+```
+
+**Unattended:**
+```bash
+REPO_URL=https://github.com/<org>/<repo> TOKEN=<token> bash -c "$(curl -fsSL https://raw.githubusercontent.com/devpijnenburg/proxmox-runner-deploy/main/scripts/create-bootstrap-runner.sh)"
 ```
 
 Haal het registratietoken op via: repo → **Settings → Actions → Runners → New self-hosted runner**.

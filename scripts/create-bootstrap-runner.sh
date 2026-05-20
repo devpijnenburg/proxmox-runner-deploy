@@ -5,10 +5,10 @@
 # Run once on the Proxmox host as root.
 #
 # Usage (unattended):
-#   REPO_URL=https://github.com/org/repo TOKEN=<token> sudo bash create-bootstrap-runner.sh
+#   REPO_URL=https://github.com/org/repo TOKEN=<token> bash -c "$(curl -fsSL <url>)"
 #
 # Usage (interactive):
-#   sudo bash create-bootstrap-runner.sh
+#   bash -c "$(curl -fsSL <url>)"
 #
 # Optional env vars:
 #   RUNNER_NAME   display name for the runner (default: proxmox-bootstrap)
