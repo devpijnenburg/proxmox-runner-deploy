@@ -21,21 +21,42 @@ Elke runner krijgt een eigen map en service op de host, zodat je meerdere runner
 
 ## Vereisten
 
-- Een Proxmox host met minimaal één bestaande self-hosted GitHub Actions runner (met label `proxmox`)
-- De bestaande runner-user heeft `sudo`-rechten nodig voor het deploy script
+- Een Proxmox host met minimaal één bestaande self-hosted GitHub Actions runner (met label `proxmox`) — zie stap 1 hieronder
 - De Proxmox host draait een Debian/Ubuntu-gebaseerd OS
 
 ## Configuratie
 
-### 1. Sudo-rechten voor de runner user
+### 1. Bootstrap runner aanmaken
 
-Voer dit eenmalig uit op de Proxmox host. Het script maakt de juiste sudoers-regel aan en valideert deze automatisch.
+De workflow heeft een bestaande runner nodig om op te draaien. Maak eenmalig een runner aan in een LXC container op je Proxmox host:
+
+1. Maak een LXC container aan (Debian of Ubuntu) en zorg dat die toegang heeft tot internet
+2. Installeer de GitHub Actions runner binary in de container:
+   - Ga naar de repo → **Settings → Actions → Runners → New self-hosted runner**
+   - Kies **Linux / X64** en volg de installatie-instructies in de container
+3. Voeg het label `proxmox` toe tijdens de configuratiestap:
+   ```bash
+   # Voeg --labels proxmox toe aan het config.sh commando
+   ./config.sh --url https://github.com/<org>/<repo> --token <TOKEN> --labels proxmox --unattended
+   ```
+4. Start de runner als service zodat hij na een herstart actief blijft:
+   ```bash
+   sudo ./svc.sh install && sudo ./svc.sh start
+   ```
+
+Controleer daarna via **Settings → Actions → Runners** of de runner online staat met het label `proxmox`.
+
+### 2. Sudo-rechten instellen in de LXC container
+
+De workflow draait `sudo bash` om het deploy script met root-rechten uit te voeren. Voer dit eenmalig uit **op de Proxmox host** (niet in de container):
 
 ```bash
-bash -c "$(curl -fsSL https://raw.githubusercontent.com/devpijnenburg/auto-github-runner/main/scripts/setup-sudo.sh)"
+sudo CTID=<container-id> bash -c "$(curl -fsSL https://raw.githubusercontent.com/devpijnenburg/proxmox-runner-deploy/main/scripts/setup-lxc-sudo.sh)"
 ```
 
-### 2. GitHub Personal Access Token (PAT) aanmaken
+Vervang `<container-id>` door het ID van de LXC container (bijv. `100`). Het script detecteert automatisch de runner-user en schrijft de sudoers-regel in de container.
+
+### 3. GitHub Personal Access Token (PAT) aanmaken
 
 De workflow heeft een PAT nodig om automatisch een runner registratietoken op te halen via de GitHub API. Maak een **fine-grained PAT** aan:
 
@@ -53,14 +74,14 @@ De workflow heeft een PAT nodig om automatisch een runner registratietoken op te
 
 > **Opmerking:** voor organisaties moet de org-eigenaar fine-grained PATs toestaan via **Org Settings → Personal access tokens → Allow fine-grained personal access tokens**.
 
-### 3. PAT opslaan als secret
+### 4. PAT opslaan als secret
 
 1. Ga naar deze repo → **Settings → Secrets and variables → Actions**
 2. Klik **New repository secret**
 3. Naam: `GH_PAT`
 4. Waarde: het zojuist aangemaakte token
 
-### 4. Runner label aanpassen (indien nodig)
+### 5. Runner label aanpassen (indien nodig)
 
 De workflow verwacht dat de bestaande Proxmox runner het label `proxmox` heeft. Controleer dit via **Settings → Actions → Runners** in jouw repo of organisatie. Pas het label aan in de workflow als het anders is:
 
@@ -101,8 +122,9 @@ De systemd service start automatisch na een herstart van de host en herstart de 
 .
 ├── .github/
 │   └── workflows/
-│       └── deploy-runner.yml   # GitHub Actions workflow (handmatig te triggeren)
+│       └── deploy-runner.yml      # GitHub Actions workflow (handmatig te triggeren)
 └── scripts/
-    ├── setup-sudo.sh           # Eenmalige setup: sudoers-regel aanmaken op de Proxmox host
-    └── deploy-runner.sh        # Deployment script dat op de Proxmox host draait
+    ├── setup-lxc-sudo.sh          # Eenmalige setup: sudoers-regel aanmaken in de LXC container (draai op de Proxmox host)
+    ├── setup-sudo.sh              # Alternatief: sudoers-regel aanmaken op de host zelf (zonder LXC)
+    └── deploy-runner.sh           # Deployment script dat op de Proxmox host draait
 ```
