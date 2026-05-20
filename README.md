@@ -35,12 +35,6 @@ Voer dit eenmalig uit op de Proxmox host. Het script maakt de juiste sudoers-reg
 bash -c "$(curl -fsSL https://raw.githubusercontent.com/devpijnenburg/auto-github-runner/main/scripts/setup-sudo.sh)"
 ```
 
-Of als je de repo al gecloned hebt op de host:
-
-```bash
-sudo bash scripts/setup-sudo.sh
-```
-
 ### 2. GitHub Personal Access Token (PAT) aanmaken
 
 De workflow heeft een PAT nodig om automatisch een runner registratietoken op te halen via de GitHub API. Maak een **fine-grained PAT** aan:
