@@ -31,7 +31,7 @@ De bootstrap runner draait **direct op de Proxmox host** (niet in een LXC), zoda
 
 **Unattended:**
 ```bash
-REPO_URL=https://github.com/<org>/<repo> TOKEN=<token> sudo bash -c \
+sudo REPO_URL=https://github.com/<org>/<repo> TOKEN=<token> bash -c \
   "$(curl -fsSL https://raw.githubusercontent.com/devpijnenburg/proxmox-runner-deploy/main/scripts/create-bootstrap-runner.sh)"
 ```
 
