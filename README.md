@@ -29,10 +29,16 @@ Elke runner krijgt een eigen map en service op de host, zodat je meerdere runner
 
 ### 1. Sudo-rechten voor de runner user
 
-Voer dit eenmalig uit op de Proxmox host:
+Voer dit eenmalig uit op de Proxmox host. Het script maakt de juiste sudoers-regel aan en valideert deze automatisch.
 
 ```bash
-echo "runner ALL=(ALL) NOPASSWD: /usr/bin/bash" | sudo tee /etc/sudoers.d/runner-deploy
+curl -fsSL https://raw.githubusercontent.com/devpijnenburg/auto-github-runner/main/scripts/setup-sudo.sh | sudo bash
+```
+
+Of als je de repo al gecloned hebt op de host:
+
+```bash
+sudo bash scripts/setup-sudo.sh
 ```
 
 ### 2. GitHub Personal Access Token (PAT) aanmaken
@@ -103,5 +109,6 @@ De systemd service start automatisch na een herstart van de host en herstart de 
 │   └── workflows/
 │       └── deploy-runner.yml   # GitHub Actions workflow (handmatig te triggeren)
 └── scripts/
+    ├── setup-sudo.sh           # Eenmalige setup: sudoers-regel aanmaken op de Proxmox host
     └── deploy-runner.sh        # Deployment script dat op de Proxmox host draait
 ```
