@@ -82,7 +82,7 @@ Wants=network-online.target
 
 [Service]
 Type=simple
-User=runner
+User=root
 WorkingDirectory=${RUNNER_DIR}
 ExecStart=${RUNNER_DIR}/run.sh
 Restart=on-failure
