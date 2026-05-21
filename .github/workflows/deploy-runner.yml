@@ -36,7 +36,7 @@ jobs:
       - name: Reserve next LXC container ID
         id: reserve-ctid
         run: |
-          CTID=$(sudo bash -c 'pvesh get /cluster/nextid')
+          CTID=$(pvesh get /cluster/nextid)
           # Some Proxmox versions return JSON; extract the number if needed
           if echo "$CTID" | grep -q '{'; then
             CTID=$(echo "$CTID" | jq -r '.')
@@ -95,7 +95,7 @@ jobs:
           RUNNER_REPO: ${{ inputs.runner_repo }}
           RUNNER_TOKEN: ${{ steps.get-token.outputs.runner_token }}
           CTID: ${{ steps.reserve-ctid.outputs.ctid }}
-        run: sudo --preserve-env=RUNNER_REPO,RUNNER_TOKEN,CTID bash scripts/deploy-runner.sh "${{ steps.resolve-name.outputs.name }}"
+        run: RUNNER_REPO="$RUNNER_REPO" RUNNER_TOKEN="$RUNNER_TOKEN" CTID="$CTID" bash scripts/deploy-runner.sh "${{ steps.resolve-name.outputs.name }}"
 
       - name: Verify runner service is active
         run: pct exec "${{ steps.reserve-ctid.outputs.ctid }}" -- systemctl is-active actions-runner

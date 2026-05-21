@@ -4,7 +4,7 @@
 # the runner inside the container via pct exec.
 #
 # Called by the deploy-runner.yml workflow as:
-#   sudo --preserve-env=RUNNER_REPO,RUNNER_TOKEN,CTID bash scripts/deploy-runner.sh <name>
+#   RUNNER_REPO=... RUNNER_TOKEN=... CTID=... bash scripts/deploy-runner.sh <name>
 #
 # Required env vars:
 #   RUNNER_REPO   - Repository or org URL (e.g. https://github.com/org/repo)
