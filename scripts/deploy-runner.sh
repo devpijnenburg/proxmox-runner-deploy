@@ -142,7 +142,7 @@ pct exec "$CTID" -- runuser -u runner -- /opt/actions-runner/config.sh \
 EXISTING=$(pct exec "$CTID" -- bash -c "cat ${SUDOERS_FILE} 2>/dev/null || true")
 if [[ "$EXISTING" != "$CORRECT_RULE" ]]; then
   pct exec "$CTID" -- bash -c \
-    "echo '${CORRECT_RULE}' > ${SUDOERS_FILE} && chmod 440 ${SUDOERS_FILE}"
+    "mkdir -p /etc/sudoers.d && echo '${CORRECT_RULE}' > ${SUDOERS_FILE} && chmod 440 ${SUDOERS_FILE}"
 fi
 
 # ── Start the runner service ───────────────────────────────────────────────────
