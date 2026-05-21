@@ -35,7 +35,18 @@ jobs:
 
       - name: Reserve next LXC container ID
         id: reserve-ctid
-        run: echo "ctid=$(sudo pvesh get /cluster/nextid)" >> "$GITHUB_OUTPUT"
+        run: |
+          CTID=$(sudo pvesh get /cluster/nextid 2>&1) \
+            || { echo "ERROR: pvesh failed — is /usr/bin/pvesh in sudoers? Output: ${CTID}" >&2; exit 1; }
+          # Some Proxmox versions return JSON; extract the number if needed
+          if echo "$CTID" | grep -q '{'; then
+            CTID=$(echo "$CTID" | jq -r '.')
+          fi
+          if [[ -z "$CTID" ]] || ! [[ "$CTID" =~ ^[0-9]+$ ]]; then
+            echo "ERROR: unexpected pvesh output — expected integer, got: '${CTID}'" >&2
+            exit 1
+          fi
+          echo "ctid=${CTID}" >> "$GITHUB_OUTPUT"
 
       # Requires a secret named GH_PAT with one of:
       #   - Fine-grained PAT: "Administration: Read & write" on the target repo
