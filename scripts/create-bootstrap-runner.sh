@@ -65,7 +65,7 @@ chown -R runner:runner "${RUNNER_DIR}"
 
 echo "==> Configuring runner '${RUNNER_NAME}' with label 'proxmox'..."
 cd "${RUNNER_DIR}" || { echo "ERROR: failed to enter ${RUNNER_DIR}" >&2; exit 1; }
-sudo -u runner ./config.sh \
+runuser -u runner -- ./config.sh \
   --url "${REPO_URL}" \
   --token "${TOKEN}" \
   --name "${RUNNER_NAME}" \

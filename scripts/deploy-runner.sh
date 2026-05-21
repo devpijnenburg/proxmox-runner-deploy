@@ -64,7 +64,7 @@ done
 
 # ── Configure the runner ───────────────────────────────────────────────────────
 echo "==> Configuring runner '${RUNNER_NAME}' inside container ${CTID}..."
-pct exec "$CTID" -- sudo -u runner /opt/actions-runner/config.sh \
+pct exec "$CTID" -- runuser -u runner -- /opt/actions-runner/config.sh \
   --url "${RUNNER_REPO}" \
   --token "${RUNNER_TOKEN}" \
   --name "${RUNNER_NAME}" \
