@@ -11,6 +11,10 @@ on:
         description: "Repository or org URL (e.g. https://github.com/org/repo)"
         required: true
         type: string
+      container_password:
+        description: "Root password for Proxmox console access (auto-generated if blank)"
+        required: false
+        type: string
 
 jobs:
   deploy:
@@ -95,7 +99,8 @@ jobs:
           RUNNER_REPO: ${{ inputs.runner_repo }}
           RUNNER_TOKEN: ${{ steps.get-token.outputs.runner_token }}
           CTID: ${{ steps.reserve-ctid.outputs.ctid }}
-        run: RUNNER_REPO="$RUNNER_REPO" RUNNER_TOKEN="$RUNNER_TOKEN" CTID="$CTID" bash scripts/deploy-runner.sh "${{ steps.resolve-name.outputs.name }}"
+          CONTAINER_PASSWORD: ${{ inputs.container_password }}
+        run: RUNNER_REPO="$RUNNER_REPO" RUNNER_TOKEN="$RUNNER_TOKEN" CTID="$CTID" CONTAINER_PASSWORD="$CONTAINER_PASSWORD" bash scripts/deploy-runner.sh "${{ steps.resolve-name.outputs.name }}"
 
       - name: Verify runner service is active
         run: pct exec "${{ steps.reserve-ctid.outputs.ctid }}" -- systemctl is-active actions-runner

@@ -21,6 +21,10 @@ on:
         description: "Repository or org URL (e.g. https://github.com/org/repo)"
         required: true
         type: string
+      container_password:
+        description: "Root password for Proxmox console access (auto-generated per container if blank)"
+        required: false
+        type: string
 
 jobs:
   deploy:
@@ -86,6 +90,7 @@ jobs:
         env:
           RUNNER_REPO: ${{ inputs.runner_repo }}
           RUNNER_TOKEN: ${{ steps.get-token.outputs.runner_token }}
+          CONTAINER_PASSWORD: ${{ inputs.container_password }}
         run: |
           for i in $(seq "${{ inputs.runner_start }}" "${{ inputs.runner_end }}"); do
             RUNNER_NAME="${{ inputs.runner_prefix }}-${i}"
@@ -98,7 +103,7 @@ jobs:
               exit 1
             fi
             echo "==> Deploying ${RUNNER_NAME} in container ${CTID}..."
-            RUNNER_REPO="$RUNNER_REPO" RUNNER_TOKEN="$RUNNER_TOKEN" CTID="$CTID" \
+            RUNNER_REPO="$RUNNER_REPO" RUNNER_TOKEN="$RUNNER_TOKEN" CTID="$CTID" CONTAINER_PASSWORD="$CONTAINER_PASSWORD" \
               bash scripts/deploy-runner.sh "${RUNNER_NAME}"
           done
 

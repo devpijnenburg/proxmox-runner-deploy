@@ -7,9 +7,11 @@
 #   RUNNER_REPO=... RUNNER_TOKEN=... CTID=... bash scripts/deploy-runner.sh <name>
 #
 # Required env vars:
-#   RUNNER_REPO   - Repository or org URL (e.g. https://github.com/org/repo)
-#   RUNNER_TOKEN  - GitHub runner registration token
-#   CTID          - LXC container ID to create
+#   RUNNER_REPO        - Repository or org URL (e.g. https://github.com/org/repo)
+#   RUNNER_TOKEN       - GitHub runner registration token
+#   CTID               - LXC container ID to create
+# Optional env vars:
+#   CONTAINER_PASSWORD - Root password for Proxmox console access (random if unset)
 
 set -euo pipefail
 
@@ -17,6 +19,7 @@ RUNNER_NAME="${1:?Usage: $0 <runner-name>}"
 RUNNER_REPO="${RUNNER_REPO:?RUNNER_REPO env var is required}"
 RUNNER_TOKEN="${RUNNER_TOKEN:?RUNNER_TOKEN env var is required}"
 CTID="${CTID:?CTID env var is required}"
+CONTAINER_PASSWORD="${CONTAINER_PASSWORD:-}"
 
 SERVICE_NAME="actions-runner"
 SUDOERS_FILE="/etc/sudoers.d/runner-deploy"
@@ -70,6 +73,13 @@ pct create "$CTID" "$TEMPLATE" \
   --onboot 1
 
 pct start "$CTID"
+
+# ── Set root password for Proxmox console access ──────────────────────────────
+if [[ -z "$CONTAINER_PASSWORD" ]]; then
+  CONTAINER_PASSWORD=$(tr -dc 'a-zA-Z0-9' < /dev/urandom | head -c 16)
+  echo "==> Generated container root password: ${CONTAINER_PASSWORD}"
+fi
+pct exec "$CTID" -- bash -c "echo 'root:${CONTAINER_PASSWORD}' | chpasswd" 2>/dev/null || true
 
 # ── Wait for container to accept commands ─────────────────────────────────────
 echo "==> Waiting for container ${CTID} to be ready..."
@@ -158,4 +168,5 @@ fi
 
 echo ""
 echo "Runner '${RUNNER_NAME}' deployed in container ${CTID}."
-echo "  Status: ${STATUS}"
+echo "  Status  : ${STATUS}"
+echo "  Console : login as root with the container password set above"
