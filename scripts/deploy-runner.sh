@@ -47,6 +47,8 @@ export BRG="vmbr0"
 export NET="dhcp"
 export VERB="no"
 export TERM="${TERM:-xterm}"
+clear() { :; }
+export -f clear
 
 bash -c "$(curl -fsSL https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/ct/github-runner.sh)"
 
