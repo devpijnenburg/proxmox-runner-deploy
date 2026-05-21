@@ -6,7 +6,7 @@
 set -euo pipefail
 
 SUDOERS_FILE="/etc/sudoers.d/runner-deploy"
-RULE="runner ALL=(ALL) NOPASSWD: SETENV: /usr/bin/bash, /usr/bin/pvesh"
+RULE="runner ALL=(ALL) NOPASSWD: SETENV: /usr/bin/bash"
 
 if [[ $EUID -ne 0 ]]; then
   echo "ERROR: this script must be run as root (use sudo)." >&2

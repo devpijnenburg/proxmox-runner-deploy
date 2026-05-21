@@ -36,8 +36,7 @@ jobs:
       - name: Reserve next LXC container ID
         id: reserve-ctid
         run: |
-          CTID=$(sudo pvesh get /cluster/nextid 2>&1) \
-            || { echo "ERROR: pvesh failed — is /usr/bin/pvesh in sudoers? Output: ${CTID}" >&2; exit 1; }
+          CTID=$(sudo bash -c 'pvesh get /cluster/nextid')
           # Some Proxmox versions return JSON; extract the number if needed
           if echo "$CTID" | grep -q '{'; then
             CTID=$(echo "$CTID" | jq -r '.')
