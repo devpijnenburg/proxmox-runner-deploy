@@ -76,7 +76,7 @@ pct start "$CTID"
 
 # ── Set root password for Proxmox console access ──────────────────────────────
 if [[ -z "$CONTAINER_PASSWORD" ]]; then
-  CONTAINER_PASSWORD=$(tr -dc 'a-zA-Z0-9' < /dev/urandom | head -c 16)
+  CONTAINER_PASSWORD=$(head -c 32 /dev/urandom | base64 | tr -d '+/=' | cut -c1-16)
   echo "==> Generated container root password: ${CONTAINER_PASSWORD}"
 fi
 pct exec "$CTID" -- bash -c "echo 'root:${CONTAINER_PASSWORD}' | chpasswd" 2>/dev/null || true
