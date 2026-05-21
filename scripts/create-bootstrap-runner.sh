@@ -83,6 +83,7 @@ Wants=network-online.target
 [Service]
 Type=simple
 User=root
+Environment=RUNNER_ALLOW_RUNASROOT=1
 WorkingDirectory=${RUNNER_DIR}
 ExecStart=${RUNNER_DIR}/run.sh
 Restart=on-failure
