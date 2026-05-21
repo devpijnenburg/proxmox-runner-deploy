@@ -26,7 +26,7 @@ jobs:
       - name: Resolve runner name
         id: resolve-name
         run: |
-          NAME="${{ inputs.runner_name }}"
+          NAME=$(echo "${{ inputs.runner_name }}" | xargs)
           if [[ -z "$NAME" ]]; then
             NAME="runner-$(uuidgen | tr '[:upper:]' '[:lower:]')"
             echo "No name provided — generated: ${NAME}"
@@ -79,7 +79,7 @@ jobs:
             -H "X-GitHub-Api-Version: 2022-11-28" \
             "${API_URL}")
 
-          TOKEN=$(echo "$RESPONSE" | grep -o '"token":"[^"]*"' | cut -d'"' -f4)
+          TOKEN=$(echo "$RESPONSE" | grep '"token"' | head -1 | cut -d'"' -f4)
 
           if [[ -z "$TOKEN" ]]; then
             echo "ERROR: failed to obtain registration token." >&2
