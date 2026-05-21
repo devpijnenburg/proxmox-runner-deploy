@@ -46,6 +46,7 @@ export RAM_SIZE="2048"
 export BRG="vmbr0"
 export NET="dhcp"
 export VERB="no"
+export TERM="${TERM:-xterm}"
 
 bash -c "$(curl -fsSL https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/ct/github-runner.sh)"
 
