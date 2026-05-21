@@ -39,7 +39,7 @@ jobs:
           CTID=$(pvesh get /cluster/nextid)
           # Some Proxmox versions return JSON; extract the number if needed
           if echo "$CTID" | grep -q '{'; then
-            CTID=$(echo "$CTID" | jq -r '.')
+            CTID=$(echo "$CTID" | grep -o '[0-9]*' | head -1)
           fi
           if [[ -z "$CTID" ]] || ! [[ "$CTID" =~ ^[0-9]+$ ]]; then
             echo "ERROR: unexpected pvesh output — expected integer, got: '${CTID}'" >&2
@@ -79,7 +79,7 @@ jobs:
             -H "X-GitHub-Api-Version: 2022-11-28" \
             "${API_URL}")
 
-          TOKEN=$(echo "$RESPONSE" | jq -r '.token // empty')
+          TOKEN=$(echo "$RESPONSE" | grep -o '"token":"[^"]*"' | cut -d'"' -f4)
 
           if [[ -z "$TOKEN" ]]; then
             echo "ERROR: failed to obtain registration token." >&2
