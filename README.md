@@ -102,6 +102,24 @@ LXC container <auto-ID>      # aangemaakt via community-scripts/ProxmoxVE
 
 De LXC container start automatisch na een herstart van de host. De runner service herstart automatisch bij een crash.
 
+## Runner verwijderen
+
+1. Verwijder uit GitHub: **Settings → Actions → Runners → Delete**
+2. Verwijder de container op de Proxmox host:
+   ```bash
+   pct stop <container-id> && pct destroy <container-id>
+   ```
+
+## Problemen oplossen
+
+| Probleem | Oplossing |
+|---|---|
+| Runner verschijnt niet in GitHub | `pct exec <id> -- systemctl status actions-runner` |
+| Token generation mislukt | Controleer PAT-permissies en de `GH_PAT` secret |
+| Container aanmaken mislukt | `pvesh get /cluster/nextid` — controleer of Proxmox beschikbare IDs heeft |
+| Service start niet | `pct exec <id> -- journalctl -u actions-runner -n 50` |
+| Bootstrap runner offline | `systemctl status actions-runner-bootstrap` op de Proxmox host |
+
 ## Structuur
 
 ```
