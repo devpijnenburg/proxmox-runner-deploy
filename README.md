@@ -118,7 +118,7 @@ De LXC container start automatisch na een herstart van de host. De runner servic
 | Token generation mislukt | Controleer PAT-permissies en de `GH_PAT` secret |
 | Container aanmaken mislukt | `pvesh get /cluster/nextid` — controleer of Proxmox beschikbare IDs heeft |
 | Service start niet | `pct exec <id> -- journalctl -u actions-runner -n 50` |
-| Bootstrap runner offline | `systemctl status actions-runner-bootstrap` op de Proxmox host |
+| Bootstrap runner offline | `systemctl status actions-runner-bootstrap` op de Proxmox host — of herinstalleer via `create-bootstrap-runner.sh` |
 
 ## Structuur
 
@@ -129,7 +129,5 @@ De LXC container start automatisch na een herstart van de host. De runner servic
 │       └── deploy-runner.yml          # GitHub Actions workflow (handmatig te triggeren)
 └── scripts/
     ├── create-bootstrap-runner.sh     # Eenmalige setup: bootstrap runner op de Proxmox host
-    ├── deploy-runner.sh               # Maakt LXC via community-scripts en configureert runner erin
-    ├── setup-lxc-sudo.sh              # Hulpscript: sudoers instellen in een bestaande LXC
-    └── setup-sudo.sh                  # Hulpscript: sudoers instellen op de host
+    └── deploy-runner.sh               # Maakt LXC via community-scripts en configureert runner erin
 ```
