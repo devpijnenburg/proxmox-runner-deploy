@@ -35,7 +35,7 @@ jobs:
 
       - name: Reserve next LXC container ID
         id: reserve-ctid
-        run: echo "ctid=$(pvesh get /cluster/nextid)" >> "$GITHUB_OUTPUT"
+        run: echo "ctid=$(sudo pvesh get /cluster/nextid)" >> "$GITHUB_OUTPUT"
 
       # Requires a secret named GH_PAT with one of:
       #   - Fine-grained PAT: "Administration: Read & write" on the target repo

@@ -104,7 +104,7 @@ if ! systemctl is-active "${SERVICE_NAME}" &>/dev/null; then
 fi
 
 echo "==> Configuring sudoers..."
-echo "runner ALL=(ALL) NOPASSWD: SETENV: /usr/bin/bash" > "${SUDOERS_FILE}"
+echo "runner ALL=(ALL) NOPASSWD: SETENV: /usr/bin/bash, /usr/bin/pvesh" > "${SUDOERS_FILE}"
 chmod 440 "${SUDOERS_FILE}"
 
 echo ""
