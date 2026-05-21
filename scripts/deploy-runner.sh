@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Deploys a GitHub Actions runner in a new LXC container on the Proxmox host.
-# Uses community-scripts/ProxmoxVE for unattended LXC creation, then configures
-# the runner inside the container via pct exec.
+# Creates the container directly with pct create (no community-scripts dependency),
+# installs the runner binary, and configures it via pct exec.
 #
 # Called by the deploy-runner.yml workflow as:
 #   RUNNER_REPO=... RUNNER_TOKEN=... CTID=... bash scripts/deploy-runner.sh <name>
@@ -31,26 +31,45 @@ fi
 
 if pct status "$CTID" &>/dev/null; then
   echo "ERROR: container ${CTID} already exists." >&2
-  echo "  To remove: pct destroy ${CTID}" >&2
+  echo "  To remove: pct stop ${CTID} && pct destroy ${CTID}" >&2
   exit 1
 fi
 
-# ── Create LXC via community-scripts (unattended) ─────────────────────────────
+# ── Find storage for container rootfs ─────────────────────────────────────────
+STORAGE=$(pvesm status --content rootdir 2>/dev/null | awk 'NR>1 {print $1; exit}')
+if [[ -z "$STORAGE" ]]; then
+  STORAGE="local-lvm"
+fi
+echo "==> Using storage: ${STORAGE}"
+
+# ── Find or download a Debian template ────────────────────────────────────────
+TEMPLATE=$(pveam list local 2>/dev/null | awk '/debian-12/ {print $1}' | tail -1)
+if [[ -z "$TEMPLATE" ]]; then
+  echo "==> No Debian 12 template found, downloading..."
+  pveam update
+  TEMPLATE_NAME=$(pveam available --section system 2>/dev/null | awk '/debian-12/ {print $2}' | tail -1)
+  if [[ -z "$TEMPLATE_NAME" ]]; then
+    echo "ERROR: no Debian 12 template available via pveam." >&2
+    exit 1
+  fi
+  pveam download local "$TEMPLATE_NAME"
+  TEMPLATE="local:vztmpl/${TEMPLATE_NAME}"
+fi
+echo "==> Using template: ${TEMPLATE}"
+
+# ── Create LXC container ───────────────────────────────────────────────────────
 echo "==> Creating LXC container ${CTID} for runner '${RUNNER_NAME}'..."
+pct create "$CTID" "$TEMPLATE" \
+  --hostname "$RUNNER_NAME" \
+  --memory 2048 \
+  --cores 2 \
+  --rootfs "${STORAGE}:8" \
+  --net0 name=eth0,bridge=vmbr0,ip=dhcp \
+  --unprivileged 1 \
+  --features nesting=1,keyctl=1 \
+  --onboot 1
 
-export CTID
-export HN="${RUNNER_NAME}"
-export DISK_SIZE="8"
-export CORE_COUNT="2"
-export RAM_SIZE="2048"
-export BRG="vmbr0"
-export NET="dhcp"
-export VERB="no"
-export TERM="${TERM:-xterm}"
-clear() { :; }
-export -f clear
-
-bash -c "$(curl -fsSL https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/ct/github-runner.sh)"
+pct start "$CTID"
 
 # ── Wait for container to accept commands ─────────────────────────────────────
 echo "==> Waiting for container ${CTID} to be ready..."
@@ -64,6 +83,50 @@ for i in $(seq 1 30); do
   fi
   sleep 2
 done
+
+# ── Install dependencies inside container ─────────────────────────────────────
+echo "==> Installing dependencies in container ${CTID}..."
+pct exec "$CTID" -- bash -c "
+  apt-get update -qq
+  apt-get install -y --no-install-recommends curl ca-certificates git
+"
+
+# ── Create runner user ─────────────────────────────────────────────────────────
+pct exec "$CTID" -- bash -c "id runner &>/dev/null || useradd -m -s /bin/bash runner"
+
+# ── Download and install runner binary ────────────────────────────────────────
+echo "==> Installing GitHub Actions runner binary..."
+LATEST_TAG=$(curl -fsSL https://api.github.com/repos/actions/runner/releases/latest \
+  | grep '"tag_name"' | head -1 | cut -d'"' -f4)
+LATEST_VER="${LATEST_TAG#v}"
+
+pct exec "$CTID" -- bash -c "
+  mkdir -p /opt/actions-runner
+  curl -fsSL https://github.com/actions/runner/releases/download/${LATEST_TAG}/actions-runner-linux-x64-${LATEST_VER}.tar.gz \
+    | tar -xz -C /opt/actions-runner
+  chown -R runner:runner /opt/actions-runner
+"
+
+# ── Create systemd service ─────────────────────────────────────────────────────
+pct exec "$CTID" -- bash -c "cat > /etc/systemd/system/actions-runner.service <<'SVCEOF'
+[Unit]
+Description=GitHub Actions self-hosted runner
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=runner
+WorkingDirectory=/opt/actions-runner
+ExecStart=/opt/actions-runner/run.sh
+Restart=on-failure
+RestartSec=10
+
+[Install]
+WantedBy=multi-user.target
+SVCEOF
+systemctl daemon-reload
+systemctl enable actions-runner"
 
 # ── Configure the runner ───────────────────────────────────────────────────────
 echo "==> Configuring runner '${RUNNER_NAME}' inside container ${CTID}..."
